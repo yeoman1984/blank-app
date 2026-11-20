@@ -1,6 +1,26 @@
 import streamlit as st
 
-st.title("🎈 My new app")
-st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
+st.set_page_config(
+    page_title="第五降临者 · 内功练习场",
 )
+
+st.title("第五降临者 · 内功练习场")
+
+st.write(
+    """
+    这里是第五降临者的内功练习场。
+
+    修行不在招式华丽，而在日复一日的扎马步——
+    写代码、调 bug、读文档，然后重来一遍。
+
+    场中三戒：
+    - **静心**：先看清问题，再动手落子。
+    - **持恒**：每日精进一寸，胜过一时猛进。
+    - **复盘**：每次提交都是一回小结，留下成长的印记。
+
+    内功非一日之功，愿此处见证每一次精进。
+    """
+)
+
+st.divider()
+st.caption("当前境界：初入江湖 · 持续修炼中")
