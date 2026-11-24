@@ -80,6 +80,45 @@
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   .footer { margin-top: 26px; font-size: 13px; color: #8a938c; text-align: center; }
   .hint { font-size: 12px; color: #a8afa9; text-align: center; margin-top: 14px; }
+
+  /* 修炼足迹 */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 8px; text-align: center;
+  }
+  .stat-num { font-size: 26px; font-weight: 700; color: var(--primary); line-height: 1.3; }
+  .stat-label { font-size: 12px; color: #8a938c; margin-top: 4px; }
+  .panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px; margin-bottom: 16px;
+  }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+  .week-chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .bar-col { text-align: center; }
+  .bar-track {
+    height: 92px; display: flex; align-items: flex-end; justify-content: center;
+    background: var(--secondary); border-radius: 6px; overflow: hidden;
+  }
+  .bar-fill { width: 62%; background: var(--primary); border-radius: 5px 5px 0 0; transition: height .35s ease; }
+  .bar-label { font-size: 12px; color: #8a938c; margin-top: 6px; }
+  .bar-num { font-size: 12px; font-weight: 600; color: var(--primary); }
+  .log-list { list-style: none; }
+  .log-list li {
+    font-size: 14px; padding: 8px 0; border-bottom: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .log-list li:last-child { border-bottom: none; }
+  .log-list li::before { content: "◈"; color: var(--primary); font-size: 12px; }
+  .log-list li.empty { color: #a8afa9; }
+  .log-list li.empty::before { content: "·"; }
+  .log-note { font-size: 12px; color: #a8afa9; margin-top: 10px; }
+  @media (max-width: 520px) {
+    .stats-grid { gap: 8px; }
+    .stat-num { font-size: 22px; }
+    .week-chart { gap: 5px; }
+    .bar-track { height: 74px; }
+  }
 </style>
 </head>
 <body>
@@ -119,6 +158,24 @@
   </div>
   <div class="hint">计数与主题会自动保存在本机，刷新或关闭页面都不会丢失</div>
 
+  <hr>
+
+  <h2>修炼足迹</h2>
+  <div class="stats-grid">
+    <div class="stat"><div class="stat-num" id="todayCount">0</div><div class="stat-label">今日打坐</div></div>
+    <div class="stat"><div class="stat-num" id="streakDays">0</div><div class="stat-label">连续修炼（天）</div></div>
+    <div class="stat"><div class="stat-num" id="totalDays">0</div><div class="stat-label">修炼天数</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">近 7 日</div>
+    <div class="week-chart" id="weekChart"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">最近记录</div>
+    <ul class="log-list" id="logList"></ul>
+    <div class="log-note" id="logNote"></div>
+  </div>
+
   <div class="footer">内功非一日之功 · 持续修炼中</div>
 </div>
 
@@ -131,11 +188,36 @@
     ink:   { primary:'#2C3E50', bg:'#F5F6F7', secondary:'#E4E8EB', text:'#22292F', card:'#FFFFFF', border:'#DDE1E4' }
   };
 
-  var count = parseInt(localStorage.getItem('neigong_count') || '0', 10);
-  var theme = localStorage.getItem('neigong_theme') || 'red';
+  var COUNT_KEY = 'neigong_count';
+  var THEME_KEY = 'neigong_theme';
+  var LOG_KEY = 'neigong_log';
+
+  var count = parseInt(localStorage.getItem(COUNT_KEY) || '0', 10);
+  if (isNaN(count) || count < 0) count = 0;
+  var theme = localStorage.getItem(THEME_KEY) || 'red';
+  var logs = [];
+  try {
+    var raw = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+    if (Array.isArray(raw)) logs = raw.filter(function (x) { return typeof x === 'number'; });
+  } catch (e) { logs = []; }
+
   var elCount = document.getElementById('count');
   var elRealm = document.getElementById('realm');
   var elToast = document.getElementById('toast');
+
+  function saveLogs() {
+    localStorage.setItem(LOG_KEY, JSON.stringify(logs.slice(-500)));
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function dayKey(d) {
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    return pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' +
+           pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
 
   function realmInfo(n) {
     if (n === 0)  return ['当前境界：初入江湖 · 尚未开始', ''];
@@ -156,7 +238,44 @@
     r.setProperty('--border', t.border);
     var dots = document.querySelectorAll('.theme-dot');
     dots.forEach(function (d) { d.classList.toggle('active', d.dataset.theme === name); });
-    localStorage.setItem('neigong_theme', name);
+    localStorage.setItem(THEME_KEY, name);
+  }
+
+  function renderStats() {
+    var byDay = {};
+    logs.forEach(function (ts) { var k = dayKey(new Date(ts)); byDay[k] = (byDay[k] || 0) + 1; });
+
+    var today = new Date();
+    document.getElementById('todayCount').textContent = byDay[dayKey(today)] || 0;
+
+    var cursor = new Date(today);
+    if (!byDay[dayKey(cursor)]) cursor.setDate(cursor.getDate() - 1);
+    var streak = 0;
+    while (byDay[dayKey(cursor)]) { streak++; cursor.setDate(cursor.getDate() - 1); }
+    document.getElementById('streakDays').textContent = streak;
+    document.getElementById('totalDays').textContent = Object.keys(byDay).length;
+
+    var week = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      week.push({ key: dayKey(d), label: '日一二三四五六'.charAt(d.getDay()), n: byDay[dayKey(d)] || 0 });
+    }
+    var max = 1;
+    week.forEach(function (x) { if (x.n > max) max = x.n; });
+    document.getElementById('weekChart').innerHTML = week.map(function (x) {
+      var h = x.n ? Math.max(8, Math.round(x.n / max * 100)) : 0;
+      return '<div class="bar-col"><div class="bar-track"><div class="bar-fill" style="height:' +
+             h + '%"></div></div><div class="bar-label">' + x.label +
+             '</div><div class="bar-num">' + x.n + '</div></div>';
+    }).join('');
+
+    var recent = logs.slice(-5).reverse();
+    document.getElementById('logList').innerHTML = recent.length
+      ? recent.map(function (ts) { return '<li>' + fmtTime(ts) + '</li>'; }).join('')
+      : '<li class="empty">还没有记录，点击「打坐一次」开始</li>';
+    document.getElementById('logNote').textContent =
+      (logs.length === 0 && count > 0) ? '注：旧版本累计次数已保留，足迹明细从本次更新开始记录。' : '';
   }
 
   var lastRealm = realmInfo(count)[1];
@@ -164,6 +283,7 @@
   function render(animate) {
     elCount.textContent = count;
     elRealm.textContent = realmInfo(count)[0];
+    renderStats();
     if (animate) {
       elCount.classList.remove('pop');
       void elCount.offsetWidth;
@@ -180,14 +300,21 @@
 
   document.getElementById('addBtn').addEventListener('click', function () {
     count += 1;
-    localStorage.setItem('neigong_count', count);
+    localStorage.setItem(COUNT_KEY, String(count));
+    logs.push(Date.now());
+    saveLogs();
     render(true);
     var cur = realmInfo(count)[1];
     if (cur && cur !== lastRealm) { showToast('境界突破 · ' + cur); lastRealm = cur; }
   });
   document.getElementById('resetBtn').addEventListener('click', function () {
-    count = 0; localStorage.setItem('neigong_count', 0);
-    lastRealm = ''; render(false);
+    if (!window.confirm('确定要清空累计次数和全部修炼记录吗？此操作不可撤销。')) return;
+    count = 0;
+    logs = [];
+    localStorage.setItem(COUNT_KEY, '0');
+    saveLogs();
+    lastRealm = '';
+    render(false);
   });
   document.getElementById('themePicker').addEventListener('click', function (e) {
     var dot = e.target.closest('.theme-dot');
