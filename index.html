@@ -82,7 +82,7 @@
   .hint { font-size: 12px; color: #a8afa9; text-align: center; margin-top: 14px; }
 
   /* 修炼足迹 */
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
   .stat {
     background: var(--card); border: 1px solid var(--border); border-radius: 12px;
     padding: 16px 8px; text-align: center;
@@ -113,11 +113,67 @@
   .log-list li.empty { color: #a8afa9; }
   .log-list li.empty::before { content: "·"; }
   .log-note { font-size: 12px; color: #a8afa9; margin-top: 10px; }
+
+  /* 调息引导 */
+  .breath-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 20px 20px; text-align: center;
+  }
+  .round-picker { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .round-btn {
+    font-size: 13px; padding: 7px 14px; border-radius: 20px;
+    background: var(--secondary); color: var(--text); border: 1px solid transparent;
+  }
+  .round-btn.active { background: var(--primary); color: #fff; }
+  .breath-wrap { transition: transform .1s linear; transform-origin: center center; }
+  .breath-stage { position: relative; width: 210px; height: 210px; margin: 0 auto 18px; }
+  .breath-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--secondary); stroke-width: 9; }
+  .ring-fg {
+    fill: none; stroke: var(--primary); stroke-width: 9; stroke-linecap: round;
+    transition: stroke-dashoffset .1s linear;
+  }
+  .breath-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: none;
+  }
+  .breath-phase { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: 4px; }
+  .breath-sec { font-size: 40px; font-weight: 700; line-height: 1.3; }
+  .breath-round { font-size: 12px; color: #8a938c; }
+  .breath-controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .breath-tip { font-size: 12px; color: #a8afa9; margin-top: 14px; line-height: 1.7; }
+
+  /* 每日目标 */
+  .goal-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; margin-top: 14px;
+  }
+  .goal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .goal-head-title { font-size: 14px; font-weight: 500; }
+  .goal-picker { display: flex; gap: 6px; }
+  .goal-btn {
+    font-size: 12px; padding: 4px 11px; border-radius: 14px;
+    background: var(--secondary); color: var(--text); border: 1px solid transparent;
+  }
+  .goal-btn.active { background: var(--primary); color: #fff; }
+  .goal-track { height: 10px; background: var(--secondary); border-radius: 6px; margin: 14px 0 8px; overflow: hidden; }
+  .goal-fill { height: 100%; width: 0; background: var(--primary); border-radius: 6px; transition: width .4s ease; }
+  .goal-text { font-size: 12px; color: #8a938c; text-align: right; }
+  .goal-card.done .goal-text { color: var(--primary); font-weight: 600; }
+
+  /* 数据备份 */
+  .data-panel { margin-top: 16px; }
+  .data-note { font-size: 13px; color: #8a938c; margin-bottom: 14px; line-height: 1.7; }
+  .data-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .data-actions button { font-size: 14px; padding: 9px 20px; }
+  .data-msg { font-size: 12px; color: var(--primary); margin-top: 10px; min-height: 18px; }
   @media (max-width: 520px) {
-    .stats-grid { gap: 8px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .stat-num { font-size: 22px; }
     .week-chart { gap: 5px; }
     .bar-track { height: 74px; }
+    .breath-stage { width: 180px; height: 180px; }
+    .breath-sec { font-size: 34px; }
   }
 </style>
 </head>
@@ -157,6 +213,46 @@
     <div class="realm" id="realm">当前境界：初入江湖 · 尚未开始</div>
   </div>
   <div class="hint">计数与主题会自动保存在本机，刷新或关闭页面都不会丢失</div>
+  <div class="goal-card" id="goalCard">
+    <div class="goal-head">
+      <div class="goal-head-title">今日目标</div>
+      <div class="goal-picker" id="goalPicker">
+        <button class="goal-btn" data-goal="1">1 次</button>
+        <button class="goal-btn active" data-goal="3">3 次</button>
+        <button class="goal-btn" data-goal="5">5 次</button>
+        <button class="goal-btn" data-goal="10">10 次</button>
+      </div>
+    </div>
+    <div class="goal-track"><div class="goal-fill" id="goalFill"></div></div>
+    <div class="goal-text" id="goalText">今日 0 / 3 次 · 还差 3 次</div>
+  </div>
+
+  <h2>调息引导</h2>
+  <div class="breath-card">
+    <div class="round-picker" id="roundPicker">
+      <button class="round-btn" data-rounds="1">1 轮 · 体验</button>
+      <button class="round-btn active" data-rounds="4">4 轮 · 标准</button>
+      <button class="round-btn" data-rounds="8">8 轮 · 精进</button>
+    </div>
+    <div class="breath-wrap" id="breathWrap">
+      <div class="breath-stage">
+        <svg class="breath-ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-bg" cx="100" cy="100" r="86"></circle>
+          <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="86"></circle>
+        </svg>
+        <div class="breath-center">
+          <div class="breath-phase" id="breathPhase">准备</div>
+          <div class="breath-sec" id="breathSec">—</div>
+          <div class="breath-round" id="breathRound">选择轮数后开始</div>
+        </div>
+      </div>
+    </div>
+    <div class="breath-controls">
+      <button class="btn-main" id="breathToggle">开始调息</button>
+      <button class="btn-reset" id="breathEnd" style="display:none">结束本次</button>
+    </div>
+    <div class="breath-tip">4 秒吸气 · 7 秒屏息 · 8 秒呼气为一轮<br>完成设定轮数，自动记一次打坐</div>
+  </div>
 
   <hr>
 
@@ -165,6 +261,7 @@
     <div class="stat"><div class="stat-num" id="todayCount">0</div><div class="stat-label">今日打坐</div></div>
     <div class="stat"><div class="stat-num" id="streakDays">0</div><div class="stat-label">连续修炼（天）</div></div>
     <div class="stat"><div class="stat-num" id="totalDays">0</div><div class="stat-label">修炼天数</div></div>
+    <div class="stat"><div class="stat-num" id="goalDaysCount">0</div><div class="stat-label">目标达成（天）</div></div>
   </div>
   <div class="panel">
     <div class="panel-title">近 7 日</div>
@@ -174,6 +271,17 @@
     <div class="panel-title">最近记录</div>
     <ul class="log-list" id="logList"></ul>
     <div class="log-note" id="logNote"></div>
+  </div>
+
+  <div class="panel data-panel">
+    <div class="panel-title">数据备份</div>
+    <div class="data-note">所有记录只保存在这台设备的浏览器里。清理浏览器数据或换设备前，先导出一份；到新设备上导入即可接着修炼。</div>
+    <div class="data-actions">
+      <button class="btn-main" id="exportBtn">导出记录</button>
+      <button class="btn-reset" id="importBtn">导入记录</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+    </div>
+    <div class="data-msg" id="dataMsg"></div>
   </div>
 
   <div class="footer">内功非一日之功 · 持续修炼中</div>
@@ -191,15 +299,24 @@
   var COUNT_KEY = 'neigong_count';
   var THEME_KEY = 'neigong_theme';
   var LOG_KEY = 'neigong_log';
+  var GOAL_KEY = 'neigong_goal';
+  var GOAL_DAYS_KEY = 'neigong_goal_days';
 
   var count = parseInt(localStorage.getItem(COUNT_KEY) || '0', 10);
   if (isNaN(count) || count < 0) count = 0;
   var theme = localStorage.getItem(THEME_KEY) || 'red';
+  var goal = parseInt(localStorage.getItem(GOAL_KEY) || '3', 10);
+  if (isNaN(goal) || goal < 1) goal = 3;
   var logs = [];
   try {
     var raw = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
     if (Array.isArray(raw)) logs = raw.filter(function (x) { return typeof x === 'number'; });
   } catch (e) { logs = []; }
+  var goalDays = [];
+  try {
+    var gd = JSON.parse(localStorage.getItem(GOAL_DAYS_KEY) || '[]');
+    if (Array.isArray(gd)) goalDays = gd.filter(function (x) { return typeof x === 'string'; });
+  } catch (e) { goalDays = []; }
 
   var elCount = document.getElementById('count');
   var elRealm = document.getElementById('realm');
@@ -254,6 +371,7 @@
     while (byDay[dayKey(cursor)]) { streak++; cursor.setDate(cursor.getDate() - 1); }
     document.getElementById('streakDays').textContent = streak;
     document.getElementById('totalDays').textContent = Object.keys(byDay).length;
+    document.getElementById('goalDaysCount').textContent = goalDays.length;
 
     var week = [];
     for (var i = 6; i >= 0; i--) {
@@ -278,12 +396,42 @@
       (logs.length === 0 && count > 0) ? '注：旧版本累计次数已保留，足迹明细从本次更新开始记录。' : '';
   }
 
+  function todayCount() {
+    var k = dayKey(new Date()), n = 0;
+    logs.forEach(function (ts) { if (dayKey(new Date(ts)) === k) n++; });
+    return n;
+  }
+
+  function renderGoal() {
+    var n = todayCount();
+    var pct = Math.min(100, Math.round(n / goal * 100));
+    document.getElementById('goalFill').style.width = pct + '%';
+    var done = n >= goal;
+    document.getElementById('goalCard').classList.toggle('done', done);
+    document.getElementById('goalText').textContent = done
+      ? '今日 ' + n + ' / ' + goal + ' 次 · 目标已达成'
+      : '今日 ' + n + ' / ' + goal + ' 次 · 还差 ' + (goal - n) + ' 次';
+    var btns = document.querySelectorAll('.goal-btn');
+    btns.forEach(function (b) { b.classList.toggle('active', parseInt(b.getAttribute('data-goal'), 10) === goal); });
+  }
+
+  function checkGoal() {
+    var k = dayKey(new Date());
+    if (todayCount() >= goal && goalDays.indexOf(k) === -1) {
+      goalDays.push(k);
+      localStorage.setItem(GOAL_DAYS_KEY, JSON.stringify(goalDays));
+      return true;
+    }
+    return false;
+  }
+
   var lastRealm = realmInfo(count)[1];
 
   function render(animate) {
     elCount.textContent = count;
     elRealm.textContent = realmInfo(count)[0];
     renderStats();
+    renderGoal();
     if (animate) {
       elCount.classList.remove('pop');
       void elCount.offsetWidth;
@@ -298,30 +446,229 @@
     showToast.timer = setTimeout(function () { elToast.classList.remove('show'); }, 2200);
   }
 
-  document.getElementById('addBtn').addEventListener('click', function () {
+  function addOne(extraMsg) {
     count += 1;
     localStorage.setItem(COUNT_KEY, String(count));
     logs.push(Date.now());
     saveLogs();
+    var goalHit = checkGoal();
     render(true);
     var cur = realmInfo(count)[1];
-    if (cur && cur !== lastRealm) { showToast('境界突破 · ' + cur); lastRealm = cur; }
+    if (cur && cur !== lastRealm) {
+      showToast('境界突破 · ' + cur);
+      lastRealm = cur;
+    } else if (goalHit) {
+      showToast('今日目标达成 · 持恒');
+    } else if (extraMsg) {
+      showToast(extraMsg);
+    }
+  }
+
+  /* ---------- 4-7-8 调息引导 ---------- */
+  var CIRC = 2 * Math.PI * 86;
+  var breathPhases = [
+    { key: 'inhale', label: '吸 气', sec: 4 },
+    { key: 'hold',   label: '屏 息', sec: 7 },
+    { key: 'exhale', label: '呼 气', sec: 8 }
+  ];
+  var elRing  = document.getElementById('ringFg');
+  var elWrap  = document.getElementById('breathWrap');
+  var elPhase = document.getElementById('breathPhase');
+  var elSec   = document.getElementById('breathSec');
+  var elRound = document.getElementById('breathRound');
+  var elToggle = document.getElementById('breathToggle');
+  var elEnd    = document.getElementById('breathEnd');
+  elRing.style.strokeDasharray = CIRC.toFixed(1);
+  elRing.style.strokeDashoffset = '0';
+
+  var totalRounds = 4;
+  var running = false, paused = false;
+  var phaseIdx = 0, roundIdx = 1;
+  var phaseStart = 0, pausedRemain = 0;
+  var timer = null;
+
+  function currentScale() {
+    var t = getComputedStyle(elWrap).transform;
+    if (!t || t === 'none') return 1;
+    var m = t.match(/matrix\(([^,]+)/);
+    return m ? parseFloat(m[1]) : 1;
+  }
+  function setScale(to, dur) {
+    elWrap.style.transition = 'transform ' + Math.max(0.1, dur) + 's linear';
+    elWrap.style.transform = 'scale(' + to + ')';
+  }
+  function resetBreathUI() {
+    clearInterval(timer); timer = null;
+    running = false; paused = false;
+    phaseIdx = 0; roundIdx = 1; pausedRemain = 0;
+    elWrap.style.transition = 'transform .4s ease';
+    elWrap.style.transform = 'scale(1)';
+    elRing.style.strokeDashoffset = '0';
+    elPhase.textContent = '准备';
+    elSec.textContent = '—';
+    elRound.textContent = '选择轮数后开始';
+    elToggle.textContent = '开始调息';
+    elEnd.style.display = 'none';
+  }
+  function enterPhase() {
+    var p = breathPhases[phaseIdx];
+    phaseStart = Date.now();
+    elPhase.textContent = p.label;
+    elRound.textContent = '第 ' + roundIdx + ' / ' + totalRounds + ' 轮';
+    elSec.textContent = p.sec;
+    setScale(p.key === 'exhale' ? 1 : 1.12, p.sec);
+    tickBreath();
+  }
+  function tickBreath() {
+    var p = breathPhases[phaseIdx];
+    var elapsed = (Date.now() - phaseStart) / 1000;
+    var remain = Math.max(0, p.sec - elapsed);
+    elSec.textContent = Math.ceil(remain);
+    elRing.style.strokeDashoffset = (CIRC * Math.min(1, elapsed / p.sec)).toFixed(1);
+    if (remain <= 0) nextPhase();
+  }
+  function nextPhase() {
+    phaseIdx++;
+    if (phaseIdx >= breathPhases.length) {
+      phaseIdx = 0;
+      roundIdx++;
+      if (roundIdx > totalRounds) {
+        resetBreathUI();
+        addOne('调息圆满 · 记一次修炼');
+        return;
+      }
+    }
+    enterPhase();
+  }
+
+  elToggle.addEventListener('click', function () {
+    if (!running) {
+      running = true;
+      enterPhase();
+      timer = setInterval(tickBreath, 100);
+      elToggle.textContent = '暂停';
+      elEnd.style.display = 'inline-block';
+      return;
+    }
+    if (!paused) {
+      var p = breathPhases[phaseIdx];
+      pausedRemain = Math.max(0, p.sec - (Date.now() - phaseStart) / 1000);
+      clearInterval(timer); timer = null;
+      paused = true;
+      elWrap.style.transition = 'none';
+      elWrap.style.transform = 'scale(' + currentScale() + ')';
+      elToggle.textContent = '继续';
+      return;
+    }
+    var p2 = breathPhases[phaseIdx];
+    phaseStart = Date.now() - (p2.sec - pausedRemain) * 1000;
+    setScale(p2.key === 'exhale' ? 1 : 1.12, pausedRemain);
+    timer = setInterval(tickBreath, 100);
+    paused = false;
+    elToggle.textContent = '暂停';
   });
+  elEnd.addEventListener('click', function () {
+    resetBreathUI();
+    showToast('本次调息已结束');
+  });
+  document.getElementById('roundPicker').addEventListener('click', function (e) {
+    var b = e.target.closest('.round-btn');
+    if (!b) return;
+    totalRounds = parseInt(b.getAttribute('data-rounds'), 10) || 4;
+    var btns = document.querySelectorAll('.round-btn');
+    btns.forEach(function (x) { x.classList.toggle('active', x === b); });
+    resetBreathUI();
+  });
+
+  document.getElementById('addBtn').addEventListener('click', function () { addOne(); });
   document.getElementById('resetBtn').addEventListener('click', function () {
-    if (!window.confirm('确定要清空累计次数和全部修炼记录吗？此操作不可撤销。')) return;
+    if (!window.confirm('确定要清空累计次数和全部修炼记录吗？此操作不可撤销。建议先导出备份。')) return;
     count = 0;
     logs = [];
+    goalDays = [];
     localStorage.setItem(COUNT_KEY, '0');
     saveLogs();
+    localStorage.setItem(GOAL_DAYS_KEY, JSON.stringify(goalDays));
     lastRealm = '';
+    resetBreathUI();
     render(false);
   });
   document.getElementById('themePicker').addEventListener('click', function (e) {
     var dot = e.target.closest('.theme-dot');
     if (dot) applyTheme(dot.dataset.theme);
   });
+  document.getElementById('goalPicker').addEventListener('click', function (e) {
+    var b = e.target.closest('.goal-btn');
+    if (!b) return;
+    goal = parseInt(b.getAttribute('data-goal'), 10) || 3;
+    localStorage.setItem(GOAL_KEY, String(goal));
+    checkGoal();
+    renderStats();
+    renderGoal();
+  });
+
+  function setDataMsg(text) { document.getElementById('dataMsg').textContent = text; }
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    var data = {
+      app: 'neigong-practice-ground',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      count: count,
+      theme: theme,
+      goal: goal,
+      logs: logs,
+      goalDays: goalDays
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'neigong-backup-' + dayKey(new Date()) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setDataMsg('已导出备份文件，请妥善保存。');
+  });
+  document.getElementById('importBtn').addEventListener('click', function () {
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var d = JSON.parse(reader.result);
+        if (!d || !Array.isArray(d.logs) || typeof d.count !== 'number' || d.count < 0) {
+          throw new Error('invalid');
+        }
+        if (!window.confirm('导入会覆盖当前设备上的全部修炼数据，确定继续吗？')) return;
+        count = d.count;
+        logs = d.logs.filter(function (x) { return typeof x === 'number'; });
+        goalDays = Array.isArray(d.goalDays) ? d.goalDays.filter(function (x) { return typeof x === 'string'; }) : [];
+        goal = (typeof d.goal === 'number' && d.goal > 0) ? d.goal : 3;
+        theme = Object.prototype.hasOwnProperty.call(themes, d.theme) ? d.theme : 'red';
+        localStorage.setItem(COUNT_KEY, String(count));
+        localStorage.setItem(GOAL_KEY, String(goal));
+        localStorage.setItem(THEME_KEY, theme);
+        saveLogs();
+        localStorage.setItem(GOAL_DAYS_KEY, JSON.stringify(goalDays));
+        lastRealm = realmInfo(count)[1];
+        applyTheme(theme);
+        resetBreathUI();
+        render(false);
+        setDataMsg('导入成功，修炼记录已恢复。');
+      } catch (err) {
+        setDataMsg('导入失败：文件格式不正确。');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
 
   applyTheme(theme);
+  resetBreathUI();
   render(false);
 </script>
 </body>
