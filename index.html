@@ -1,19 +1,140 @@
-第五降临者 · 内功练习场
-这里是第五降临者的内功练习场。
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第五降临者 · 内功练习场</title>
+<style>
+  :root {
+    --primary: #B23A2E;
+    --bg: #FAFAF7;
+    --secondary: #E8F0EC;
+    --text: #1F2D28;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.9;
+    padding: 24px 18px 60px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 {
+    font-size: 30px;
+    color: var(--primary);
+    margin-bottom: 22px;
+    letter-spacing: 1px;
+  }
+  .prose { font-size: 16px; color: var(--text); }
+  .prose p { margin-bottom: 14px; }
+  .prose strong { color: var(--primary); }
+  .rule-list {
+    background: var(--secondary);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 16px 22px;
+    margin: 18px 0;
+  }
+  .rule-list li { list-style: none; margin: 8px 0; }
+  .rule-list li::before { content: "· "; color: var(--primary); font-weight: bold; }
+  hr { border: none; border-top: 1px solid #d8ddd9; margin: 30px 0; }
+  h2 { font-size: 21px; color: var(--primary); margin-bottom: 16px; }
+  .counter-card {
+    background: #fff;
+    border: 1px solid #e3e6e3;
+    border-radius: 14px;
+    padding: 26px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  }
+  .count-num {
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+    margin: 10px 0 4px;
+  }
+  .count-label { font-size: 14px; color: #6b746e; margin-bottom: 24px; }
+  .buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  button {
+    font-family: inherit;
+    font-size: 16px;
+    padding: 12px 30px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s, transform .08s;
+  }
+  button:active { transform: scale(0.96); }
+  .btn-main { background: var(--primary); color: #fff; }
+  .btn-reset { background: var(--secondary); color: var(--text); }
+  button:hover { opacity: .88; }
+  .realm {
+    margin-top: 22px;
+    font-size: 15px;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .footer { margin-top: 26px; font-size: 13px; color: #8a938c; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>第五降临者 · 内功练习场</h1>
 
-修行不在招式华丽，而在日复一日的扎马步——写代码、调 bug、读文档，然后重来一遍。
+  <div class="prose">
+    <p>这里是第五降临者的内功练习场。</p>
+    <p>修行不在招式华丽，而在日复一日的扎马步——写代码、调 bug、读文档，然后重来一遍。</p>
+    <p>场中三戒：</p>
+    <ul class="rule-list">
+      <li><strong>静心</strong>：先看清问题，再动手落子。</li>
+      <li><strong>持恒</strong>：每日精进一寸，胜过一时猛进。</li>
+      <li><strong>复盘</strong>：每次提交都是一回小结，留下成长的印记。</li>
+    </ul>
+    <p>内功非一日之功，愿此处见证每一次精进。</p>
+  </div>
 
-场中三戒：
+  <hr>
 
-静心：先看清问题，再动手落子。
-持恒：每日精进一寸，胜过一时猛进。
-复盘：每次提交都是一回小结，留下成长的印记。
-内功非一日之功，愿此处见证每一次精进。
+  <h2>打坐计数</h2>
+  <div class="counter-card">
+    <div class="count-num" id="count">0</div>
+    <div class="count-label">累计修炼次数</div>
+    <div class="buttons">
+      <button class="btn-main" id="addBtn">打坐一次</button>
+      <button class="btn-reset" id="resetBtn">重置</button>
+    </div>
+    <div class="realm" id="realm">当前境界：初入江湖 · 尚未开始</div>
+  </div>
 
-打坐计数
-0
-累计修炼次数
-打坐一次
-重置
-当前境界：初入江湖 · 尚未开始
-内功非一日之功 · 持续修炼中
+  <div class="footer">内功非一日之功 · 持续修炼中</div>
+</div>
+
+<script>
+  var count = 0;
+  var elCount = document.getElementById('count');
+  var elRealm = document.getElementById('realm');
+
+  function realmText(n) {
+    if (n === 0) return '当前境界：初入江湖 · 尚未开始';
+    if (n < 5)  return '当前境界：初入江湖 · 持续修炼中';
+    if (n < 15) return '当前境界：小有所成 · 气沉丹田';
+    if (n < 30) return '当前境界：渐入佳境 · 心如止水';
+    return '当前境界：登峰造极 · 返璞归真';
+  }
+  function render() {
+    elCount.textContent = count;
+    elRealm.textContent = realmText(count);
+  }
+  document.getElementById('addBtn').addEventListener('click', function () {
+    count += 1; render();
+  });
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    count = 0; render();
+  });
+  render();
+</script>
+</body>
+</html>
+
