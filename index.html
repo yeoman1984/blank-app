@@ -1323,8 +1323,25 @@ function loadSession() {
 }
 function validSession(s) {
   if (!s || !Array.isArray(s.ids) || !s.ids.length) return false;
-  if (s.fp && s.fp !== BANK_FP) return false; // 题库结构变了就丢弃旧会话，避免串题
   if (typeof s.idx !== 'number' || s.idx < 0 || s.idx >= s.ids.length) return false;
+  // 新版会话：按题目稳定标识 uid 校验，题库增减 / 重排都不影响，做题进度不会丢
+  if (Array.isArray(s.uids) && s.uids.length === s.ids.length) {
+    var byUid = {};
+    QUESTIONS.forEach(function (q) { byUid[qKey(q)] = q.id; });
+    for (var k = 0; k < s.uids.length; k++) {
+      if (!s.uids[k] || !byUid[s.uids[k]]) return false; // 只有题目真被删了才降级
+    }
+    return true;
+  }
+  // 旧版会话（没有 uids）：题目 id 是数组序号，只要这些序号在当前题库仍然存在就继续。
+  // 不再用 BANK_FP 整体比对（它含题目总数，一加题就变，会把正在做的练习误判为失效）；
+  // 恢复后 renderQuestion() 会自动把会话升级成带 uids 的新格式。
+  // 保险：fp 里记着旧题库题目总数，若新版本题目反而变少（删过题 / 重排过），
+  // 数字序号可能已经串题，宁可降级也不把孩子带到错误的题目上。
+  if (s.fp) {
+    var oldLen = parseInt(String(s.fp).split('_')[0], 10);
+    if (oldLen > 0 && QUESTIONS.length < oldLen) return false;
+  }
   var validIds = {};
   QUESTIONS.forEach(function (q) { validIds[q.id] = true; });
   for (var i = 0; i < s.ids.length; i++) if (!validIds[s.ids[i]]) return false;
@@ -1337,8 +1354,15 @@ function saveSession() {
   var solution = document.getElementById('solution');
   var input = document.getElementById('answerInput');
   var solBody = document.getElementById('solBody');
+  // 把这一轮的题目按稳定 uid 存一份：以后题库加题 / 重排，仍能按 uid 找回同一批题，
+  // 正在做到一半的练习不会因版本更新而丢失。
+  var byId = {};
+  QUESTIONS.forEach(function (q) { byId[q.id] = q; });
+  var uids = current.ids.map(function (id) { var q = byId[id]; return q ? qKey(q) : ''; });
+  if (!uids.length || uids.some(function (u) { return !u; })) uids = null; // 异常时退回旧格式，不写坏会话
   localStorage.setItem(SESSION_KEY, JSON.stringify({
     fp: BANK_FP,
+    uids: uids || undefined,
     ids: current.ids.slice(), idx: current.idx, correct: current.correct,
     answered: current.answered, isWrongMode: current.isWrongMode,
     categoryId: current.categoryId || 0,
@@ -1657,8 +1681,16 @@ function restoreSession() {
   if (!validSession(s)) return false;
   applyRank();
   var ans = (s.answers && typeof s.answers === 'object' && !Array.isArray(s.answers)) ? s.answers : {};
+  var ids = s.ids.slice();
+  // 新版会话：按稳定 uid 把题目重新映射到当前题库的 id。
+  // uids 与 ids 一一对应、顺序不变，所以 idx / answers（按下标存）/ 草稿 / 反馈 / 解析都原样有效。
+  if (Array.isArray(s.uids) && s.uids.length === s.ids.length) {
+    var byUid = {};
+    QUESTIONS.forEach(function (q) { byUid[qKey(q)] = q.id; });
+    ids = s.uids.map(function (u) { return byUid[u]; });
+  }
   current = {
-    ids: s.ids.slice(), idx: s.idx, correct: s.correct || 0,
+    ids: ids, idx: s.idx, correct: s.correct || 0,
     answered: !!s.answered, isWrongMode: !!s.isWrongMode,
     categoryId: s.categoryId || 0, answers: ans
   };
